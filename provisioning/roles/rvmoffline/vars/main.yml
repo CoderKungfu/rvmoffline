@@ -1,0 +1,3 @@
+default_ruby_version: "2.0.0-p481"
+gems_version: "2.4.1"
+bundler_version: "1.7.2"

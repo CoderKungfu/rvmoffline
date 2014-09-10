@@ -1,0 +1,47 @@
+---
+- name: Install packages
+  yum: name={{ item }} state=installed
+  sudo: true
+  with_flattened:
+    - libyaml-devel
+    - libffi-devel
+    - readline-devel
+    - zlib-devel
+    - openssl-devel
+
+- name: Creates folders
+  command: mkdir /tmp/rvm creates=/tmp/rvm
+
+- name: Copy RVM & Bundler Files
+  copy: src={{ item }} dest=/tmp/{{ item }}
+  with_items:
+    - rvm-stable.tar.gz
+    - bundler-{{ bundler_version }}.gem
+    - passenger-gems.tgz
+
+- name: Untar RVM
+  command: tar --strip-components=1 -xzf ../rvm-stable.tar.gz chdir=/tmp/rvm creates=~/.rvm
+
+- name: Install RVM
+  command: ./install --auto-dotfiles chdir=/tmp/rvm creates=~/.rvm
+
+- name: Copy archives
+  copy: src=archives/ dest=~/.rvm/archives/
+
+# - command: echo "" > ~/.rvm/gemsets/default.gems creates=~/.rvm/gemsets/default.gems
+# - command: echo "" > ~/.rvm/gemsets/global.gems creates=~/.rvm/gemsets/global.gems
+
+- name: Install Ruby
+  command: bash -lc "rvm autolibs read-fail && rvm install {{ default_ruby_version }} --rubygems {{ gems_version }}" creates=~/.rvm/rubies/ruby-{{ default_ruby_version }}
+
+- name: Set default ruby
+  command: bash -lc "rvm use {{ default_ruby_version }} --default"
+
+- name: Install Bundler
+  command: bash -lc "gem install bundler-{{ bundler_version }}.gem" chdir=/tmp/ creates=~/.rvm/gems/ruby-{{ default_ruby_version }}/bin/bundler
+
+- name: Unzip Passenger
+  command: tar xzf passenger-gems.tgz chdir=/tmp/ creates=/tmp/passenger-gems
+
+- name: Install Passenger
+  command: bash -lc "bundle install --local" chdir=/tmp/passenger-gems/ creates=~/.rvm/gems/ruby-{{ default_ruby_version }}/bin/passenger-config
